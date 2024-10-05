@@ -116,6 +116,12 @@ print("\nData Types", meter_readings_df.dtypes)
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC <img src="Schema.png" alt="Image Description" width="500" height="500">
+# MAGIC
+
+# COMMAND ----------
+
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DoubleType, DateType
 from pyspark.sql import functions as F
 
