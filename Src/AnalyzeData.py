@@ -6,33 +6,6 @@
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC ### DataSet 1:  Cleaned Meter Readings 
-
-# COMMAND ----------
-
-storage_end_point = "assign1storebekalue.dfs.core.windows.net" 
-my_scope = "MarchMadnessScope"
-my_key = "march-madstore-key"
-
-spark.conf.set(
-    "fs.azure.account.key." + storage_end_point,
-    dbutils.secrets.get(scope=my_scope, key=my_key))
-
-uri = "abfss://assign1@assign1storebekalue.dfs.core.windows.net/"
-
-
-
-
-# read data
-meter_readings_df = spark.read.csv(uri + "output/CleanMeterData/CSV/part-00000-tid-8348721999135757182-bed5e7a6-8e5a-4f20-bd5a-1036b3b0717b-108-1-c000.csv", 
-                                   header=True, inferSchema=False)
-
-
-display(meter_readings_df)
-
-# COMMAND ----------
-
 # Generate data frame for the questions and answers.
 from pyspark.sql import Row
 from pyspark.sql.functions import lit, when, sum
@@ -70,36 +43,6 @@ display(answer_df)
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC ## The Second Data Set : `CustMeter.csv`
-# MAGIC
-# MAGIC - contains more information about each customer and meter. 
-# MAGIC - A given Customer Account Number can have multiple Meter Numbers. 
-# MAGIC - Each Meter Number may have multiple Data Types.
-
-# COMMAND ----------
-
-
-custMeter_df = spark.read.csv(uri + "InputData/CustMeter.csv", header=True, inferSchema=True)
-
-# columns
-all_columns = custMeter_df.columns
-
-print("\nAll columns", all_columns)
-
-
-print("\nTotal columns:  ", len(custMeter_df.columns))
-print("\nTotal rows:  ", custMeter_df.count()) 
-
-
-# data types
-print("\nData Types", custMeter_df.dtypes)
-
-
-display(custMeter_df)
-
-# COMMAND ----------
-
 # Question 2 - What's the total electrical usage for the day?
 # Your code
 your_answer = 2.0
@@ -107,10 +50,6 @@ your_answer = 2.0
 # Add answer to the answer data frame.  
 answer_df = answer_df.withColumn("Answer", when(answer_df.Number == 2, lit(your_answer)).otherwise(answer_df.Answer))
 display(answer_df)
-
-# COMMAND ----------
-
-
 
 # COMMAND ----------
 
@@ -179,6 +118,84 @@ total_combos = 12
 # Add answer to the answer data frame.  
 answer_df = answer_df.withColumn("Answer", when(answer_df.Number == 12, lit(total_combos)).otherwise(answer_df.Answer))
 display(answer_df)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Read data
+# MAGIC
+# MAGIC - Data set1: Cleaned meter data ( from step-1)
+# MAGIC - Data set2: `CustMeter.csv`
+# MAGIC   - contains more information about each customer and meter. 
+# MAGIC   - A given Customer Account Number can have multiple Meter Numbers. 
+# MAGIC   - Each Meter Number may have multiple Data Types.
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### CSV vs Parquet ?
+# MAGIC
+# MAGIC - Parquet format: 
+# MAGIC   - preserves meta-data (`schema information`)
+# MAGIC   - binary data
+# MAGIC   - used for data analysis   
+# MAGIC
+# MAGIC
+# MAGIC - csv format: 
+# MAGIC   - does not retain schema
+# MAGIC   - all data types will be downcasted to text type ( shown below)
+
+# COMMAND ----------
+
+storage_end_point = "assign1storebekalue.dfs.core.windows.net" 
+my_scope = "MarchMadnessScope"
+my_key = "march-madstore-key"
+
+spark.conf.set(
+    "fs.azure.account.key." + storage_end_point,
+    dbutils.secrets.get(scope=my_scope, key=my_key))
+
+uri = "abfss://assign1@assign1storebekalue.dfs.core.windows.net/"
+
+
+# read csv 
+meter_csv = spark.read.csv(uri + "output/CleanMeterData/CSV/part-00000-tid-8348721999135757182-bed5e7a6-8e5a-4f20-bd5a-1036b3b0717b-108-1-c000.csv", 
+                                   header=True, inferSchema=True)
+
+# read parquet 
+meter_parquet = spark.read.parquet(uri + "output/CleanMeterData/Parquet/part-00000-tid-8124918960389894414-f0768c86-e91b-4064-931d-a06ea3bcfd48-111-1.c000.snappy.parquet")
+
+print("\ncsv data - no schema:")
+display(meter_csv.limit(2))
+print("\nparquet data - with schema:")
+display(meter_parquet.limit(2))
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Explore dataset2: `CustMeter.csv`
+
+# COMMAND ----------
+
+
+custMeter_df = spark.read.csv(uri + "InputData/CustMeter.csv", header=True, inferSchema=True)
+
+# columns
+all_columns = custMeter_df.columns
+
+print(f"All columns: {all_columns}" )
+print(f"Total columns:  {len(custMeter_df.columns):->21}")
+print(f"Total rows:  {custMeter_df.count():->24}") 
+
+# data types
+print("\nData Types : ")
+for col, dType in custMeter_df.dtypes:
+
+  print(f"{col:25}: {dType:->10}")
+
+print("\n")
+
+display(custMeter_df.limit(5))
 
 # COMMAND ----------
 
