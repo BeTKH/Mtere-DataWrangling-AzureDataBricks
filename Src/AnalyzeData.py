@@ -6,7 +6,30 @@
 
 # COMMAND ----------
 
-# Read your data.
+# MAGIC %md
+# MAGIC ### DataSet 1:  Cleaned Meter Readings 
+
+# COMMAND ----------
+
+storage_end_point = "assign1storebekalue.dfs.core.windows.net" 
+my_scope = "MarchMadnessScope"
+my_key = "march-madstore-key"
+
+spark.conf.set(
+    "fs.azure.account.key." + storage_end_point,
+    dbutils.secrets.get(scope=my_scope, key=my_key))
+
+uri = "abfss://assign1@assign1storebekalue.dfs.core.windows.net/"
+
+
+
+
+# read data
+meter_readings_df = spark.read.csv(uri + "output/CleanMeterData/CSV/part-00000-tid-8348721999135757182-bed5e7a6-8e5a-4f20-bd5a-1036b3b0717b-108-1-c000.csv", 
+                                   header=True, inferSchema=False)
+
+
+display(meter_readings_df)
 
 # COMMAND ----------
 
@@ -39,11 +62,41 @@ display(answer_df)
 
 # Question 1 - How many rows are in your cleaned dataset.
 # Your code
-your_answer = 1.0 
+your_answer = 4644.0
 
 # Add answer to the answer data frame.  
 answer_df = answer_df.withColumn("Answer", when(answer_df.Number == 1, lit(your_answer)).otherwise(answer_df.Answer))
 display(answer_df)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## The Second Data Set : `CustMeter.csv`
+# MAGIC
+# MAGIC - contains more information about each customer and meter. 
+# MAGIC - A given Customer Account Number can have multiple Meter Numbers. 
+# MAGIC - Each Meter Number may have multiple Data Types.
+
+# COMMAND ----------
+
+
+custMeter_df = spark.read.csv(uri + "InputData/CustMeter.csv", header=True, inferSchema=True)
+
+# columns
+all_columns = custMeter_df.columns
+
+print("\nAll columns", all_columns)
+
+
+print("\nTotal columns:  ", len(custMeter_df.columns))
+print("\nTotal rows:  ", custMeter_df.count()) 
+
+
+# data types
+print("\nData Types", custMeter_df.dtypes)
+
+
+display(custMeter_df)
 
 # COMMAND ----------
 
@@ -54,6 +107,10 @@ your_answer = 2.0
 # Add answer to the answer data frame.  
 answer_df = answer_df.withColumn("Answer", when(answer_df.Number == 2, lit(your_answer)).otherwise(answer_df.Answer))
 display(answer_df)
+
+# COMMAND ----------
+
+
 
 # COMMAND ----------
 
@@ -126,4 +183,4 @@ display(answer_df)
 # COMMAND ----------
 
 # Save your file.  Specify your container and storage account path in the uri variable.
-answer_df.coalesce(1).write.option('header',True).mode('overwrite').csv(uri+"Analysis/Answers.csv")
+# answer_df.coalesce(1).write.option('header',True).mode('overwrite').csv(uri+"Analysis/Answers.csv")

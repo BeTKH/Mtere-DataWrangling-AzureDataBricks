@@ -58,6 +58,15 @@
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC %md
+# MAGIC ## Reading the Data
+# MAGIC
+# MAGIC - DailyMeterData.dat (first data)
+# MAGIC - CustMeter.csv (2nd data)
+
+# COMMAND ----------
+
 storage_end_point = "assign1storebekalue.dfs.core.windows.net" 
 my_scope = "MarchMadnessScope"
 my_key = "march-madstore-key"
@@ -68,19 +77,8 @@ spark.conf.set(
 
 uri = "abfss://assign1@assign1storebekalue.dfs.core.windows.net/"
 
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC %md
-# MAGIC ## Reading the Data
-# MAGIC
-# MAGIC - DailyMeterData.dat (first data)
-# MAGIC - CustMeter.csv (2nd data)
-
-# COMMAND ----------
 
 # read data from the Azure Blob storage
-
 meter_readings_df = spark.read.csv(uri + "InputData/DailyMeterData.dat", 
                                    header=True, inferSchema=False)
 
@@ -386,7 +384,7 @@ display(sorted_clean_df)
 # COMMAND ----------
 
 # Save sorted_clean_df as CSV into "output/CleanMeterData/CSV" 
-sorted_clean_df.coalesce(1).write.option('header', True).mode('overwrite').csv(uri + "output/CleanMeterData/CSV")
+#sorted_clean_df.coalesce(1).write.option('header', True).mode('overwrite').csv(uri + "output/CleanMeterData/CSV")
 
 # Save sorted_clean_df as Parquet into "output/CleanMeterData/Parquet"
-sorted_clean_df.coalesce(1).write.mode('overwrite').parquet(uri + "output/CleanMeterData/Parquet")
+#sorted_clean_df.coalesce(1).write.mode('overwrite').parquet(uri + "output/CleanMeterData/Parquet")
