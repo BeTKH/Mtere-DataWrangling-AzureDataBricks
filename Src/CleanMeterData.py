@@ -60,10 +60,9 @@
 
 # MAGIC %md
 # MAGIC %md
-# MAGIC ## Reading the Data
+# MAGIC # Step-1: Reading the Data
 # MAGIC
-# MAGIC - DailyMeterData.dat (first data)
-# MAGIC - CustMeter.csv (2nd data)
+# MAGIC - `DailyMeterData.dat`
 
 # COMMAND ----------
 
@@ -103,10 +102,9 @@ print("\nData Types", meter_readings_df.dtypes)
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC %md
-# MAGIC ### Insights:
+# MAGIC ### Insights about data: 
 # MAGIC - All columns (DT, Meter Number, etc.) are read as a single column string field => data in a df has just one column.
-# MAGIC - data type of the entire field is string =>  each row in a column is treated as one long string
+# MAGIC - data type of the entire field is `string` =>  each row in a column is treated as one long string
 # MAGIC
 # MAGIC ### steps to fix those:
 # MAGIC - separate columns using a delemiter `|`
@@ -124,6 +122,13 @@ print("\nData Types", meter_readings_df.dtypes)
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC ## Step-2: Data Modeling ( define schema)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC The data model is visualized in UML below:
+# MAGIC
 # MAGIC <img src="../Schema.png" alt="Image Description" width="500" height="500">
 
 # COMMAND ----------
@@ -153,15 +158,41 @@ schema = StructType([
 meter_readings_df = spark.read.options(delimiter='|', header=True).schema(schema).csv(uri + "InputData/DailyMeterData.dat")
 
 
+# how many columns ? & rows ?
+all_columns = meter_readings_df.columns
+
+print(f"\nTotal columns in wide format :  {len(meter_readings_df.columns):<10}")
+print(f"\nTotal rows in wide format    :  {meter_readings_df.count():<10}") 
 
 # Display the cleaned DataFrame
-display(meter_readings_df)
+display(meter_readings_df.limit(4))
+
+
+# COMMAND ----------
+
+# a look at one customer 
+cust_1 = "1693001695"
+
+# Filter by meter num
+cust1_wideTable = meter_readings_df.filter(F.col("Customer Account Number") == cust_1)
+
+display(cust1_wideTable)
 
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Melting 
+# MAGIC #### insights:
+# MAGIC - the data is in wide format, there are `58 columns`
+# MAGIC - we need to convert it into `wide format` => `melting` 
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Step-3: Melting (aka Pivoting)
+# MAGIC
+# MAGIC - convert the data from wide form to long form
+# MAGIC - preferred for analysis 
 
 # COMMAND ----------
 
@@ -187,7 +218,7 @@ def melt_meter_readings(
     #  each struct contains  hour, QC code, interval value, and QCC value
     stacked_cols = array(*(
         struct(
-            col("Start Time").alias(interval_hour_col),  # Use Start Time as IntervalHour
+            lit(i).alias(interval_hour_col),         # Use interval number as IntervalHour
             col(f"Interval#{i}").alias(interval_value_col),  # Interval value for that interval
             lit(f"QC#{i}").alias(qc_code_col),               # QC code (QC#1 to QC#24)
             col(f"QC#{i}").cast(DoubleType()).alias(qcc_value_col)  # QCC value for that QC code
@@ -209,6 +240,7 @@ def melt_meter_readings(
     
     return melted_df
 
+
 # Columns to keep
 retained_columns = [
     "DT",
@@ -223,36 +255,85 @@ retained_columns = [
 ]
 
 # Apply the melting function to the DataFrame
-long_format_df = melt_meter_readings(
-    meter_readings_df,
-    retained_columns,
-    "IntervalHour",     # New column for interval hour
-    "IntervalValue",    # New column for interval value
-    "QCCode",           # New column for QC code
-    "QCC_Value"         # New column for QCC Value
-)
+long_format_df = melt_meter_readings(meter_readings_df, 
+                                     retained_columns,
+                                     "IntervalHour",     # New column for interval hour
+                                     "IntervalValue",    # New column for interval value
+                                     "QCCode",           # New column for QC code
+                                     "QCC_Value"         # New column for QCC Value
+                                     )
 
 
-display(long_format_df)
+
+# how many rows & columns after melting ?
+print(f"\nTotal columns in long format :  {len(long_format_df.columns):<10}")
+print(f"\nTotal rows in long format   :  {long_format_df.count():<10}") 
+
+display(long_format_df.limit(4))
 
 # COMMAND ----------
 
-# total number of rows in df
-total_rows = long_format_df.count()
+# a look at specific customer 
+cust_1 = "1693001695"
 
-print(f"Total number of rows: {total_rows}")
+# Filter by meter num
+cust1_longTable = long_format_df.filter(F.col("Customer Account Number") == cust_1)
+
+display(cust1_longTable)
+
 
 # COMMAND ----------
 
 # MAGIC %md
 # MAGIC ### Insight
-# MAGIC - now the data is in long format 
-# MAGIC - we went from 4,644 rows to 111,456 which seems correct because 4,644  * 24 = 111,456
+# MAGIC - now the data is in long format, downsized to `13` columns from `58`
+# MAGIC - we went from `4,644` rows to `111,456` which seems correct because `4,644`  * `24` = `111,456`
 # MAGIC
 # MAGIC
-# MAGIC ### Subset specific Data Types 
 # MAGIC
-# MAGIC subset DataTypes of: 
+# MAGIC
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Step-4: Subset specific Data Types 
+
+# COMMAND ----------
+
+#### How many unique data types we have?
+
+# unique Data Type values
+unique_data_types = long_format_df.select("Data Type").distinct()
+
+unique_data_types_list = [row["Data Type"] for row in unique_data_types.collect()]
+
+print("\nnumber of unique units:", len(unique_data_types_list), "\n")
+# unique Data Type units
+
+for index, i in enumerate(unique_data_types_list, start=1):
+    print(f"  {index} -> : {i}")
+
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC - we have 9 different data types of energy measurement in the data. 
+# MAGIC
+# MAGIC #### what does those units mean?
+# MAGIC - `Secure Consumption in Watts`: Real-time power consumption, with "secure" indicating verified or reliable measurements.
+# MAGIC - `KWH (Kilowatt-Hour)`: Total energy consumed over time, commonly used for billing.
+# MAGIC - `Variable Energy Value in Wh`: Energy consumed in watt-hours, with values that may fluctuate based on conditions.
+# MAGIC - `UNITS`: A synonym for KWH, representing total electricity consumption.
+# MAGIC - `Signed Net in Watts`: Real-time net power flow, indicating whether energy is consumed (positive) or generated (negative).
+# MAGIC - `Net Energy in Wh`: Total energy consumed minus energy returned to the grid.
+# MAGIC - `Rev Consumption in Watts`: Real-time power being returned to the grid.
+# MAGIC - `Reverse Energy in Wh`: Total energy sent back to the grid over time.
+# MAGIC - `Fwd Consumption in Watts`: Real-time power currently being used.
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### subset DataTypes and keep only: 
 # MAGIC
 # MAGIC - `KWH`, 
 # MAGIC - `UNITS`, 
@@ -269,20 +350,30 @@ data_types_to_filter = ["KWH", "UNITS", "Signed Net in Watts", "Fwd Consumption 
 # Filter the df using filter
 filtered_df_kws = long_format_df.filter(F.col("Data Type").isin(data_types_to_filter))
 
-display(filtered_df_kws)
+
+print(f"\nTotal columns after filtering by dataTypes :  {len(filtered_df_kws.columns):<10}")
+print(f"\nTotal rows after filtering by dataTypes    :  {filtered_df_kws.count():<10}") 
+
+display(filtered_df_kws.limit(4))
 
 
 # COMMAND ----------
 
-# total number of rows in the df
-total_rows_kwh_filtered = filtered_df_kws.count()
+# a look at specific customer
+cust_1 = "1693001695"
 
-print(f"Total number of rows: {total_rows_kwh_filtered}")
+# Filter by meter num
+cust1_longTable_filtered = filtered_df_kws.filter(F.col("Customer Account Number") == cust_1)
+
+display(cust1_longTable_filtered)
+
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC - after susbetting those specicific data types, we have `10,2984` records. 
+# MAGIC
+# MAGIC #### Insights after filtering by dataTypes:
+# MAGIC - after susbetting those specicific data types, we are now down to `10,2984` records. 
 # MAGIC - Ignored `8,472` records of other data types
 
 # COMMAND ----------
@@ -310,41 +401,40 @@ number_of_rows(long_format_df, ["Fwd Consumption in Watts"])
 
 # COMMAND ----------
 
-# unique Data Type values
-unique_data_types = long_format_df.select("Data Type").distinct()
-
-unique_data_types_list = [row["Data Type"] for row in unique_data_types.collect()]
-
-print("\nnumber of unique units:", len(unique_data_types_list), "\n")
-# unique Data Type units
-for i in unique_data_types_list:
-  print(i)
-
-# COMMAND ----------
-
 # MAGIC %md
-# MAGIC ## Remove some records further
+# MAGIC ## Step-5: Detelte records ( delete bad reads & Duplicates )
 # MAGIC
-# MAGIC - all bad readings havd   QC != 3, should be removed ( including zero)
-# MAGIC - any duplicate reading should be deleted. 
-# MAGIC
-# MAGIC #### Remove Duplicates & bad reads  with `QC` != `QC#3`
+# MAGIC - all bad readings have `QC != 3, should be removed ( including zero)
+# MAGIC - All bad readings should be deleted. 
+# MAGIC - A reading is bad if a QC code is:
+# MAGIC   - different from `3` (`QC` != `QC#3`). 
+# MAGIC   -  empty value
+# MAGIC - Delete duplicate records 
 
 # COMMAND ----------
 
 # Remove records where QCCode != "QC#3"
-
 goodreadings_df = long_format_df.filter(filtered_df_kws.QCCode == "QC#3")
-
 goodreadings_dedup_df = long_format_df.filter(filtered_df_kws.QCCode == "QC#3").dropDuplicates()
 
 
 goodreadings_df_rows_count = goodreadings_df.count()
-print(f"\nTotal number of rows: {goodreadings_df_rows_count} \n")
+
+print(f"\nTotal rows after deleting bad records    :  {goodreadings_df.count():<10}") 
+print(f"\nTotal rows after deleting duplicate + bad records    :  {goodreadings_dedup_df.count():<10}") 
 
 
 
-display(goodreadings_df)
+# COMMAND ----------
+
+# a look at specific customer
+cust_1 = "1693001695"
+
+# Filter by meter num
+cust1_long_dedup = goodreadings_dedup_df.filter(F.col("Customer Account Number") == cust_1)
+
+display(cust1_long_dedup)
+
 
 # COMMAND ----------
 
@@ -357,7 +447,7 @@ display(goodreadings_df)
 # MAGIC - seems like we are back to the original data length but smaller width
 # MAGIC
 # MAGIC
-# MAGIC ## Ordering the Records 
+# MAGIC ## Step-6: Ordering the Records 
 # MAGIC
 # MAGIC - Data should be sorted in ascending customer, meter, datatype, date, and interval hour 
 # MAGIC - (note - interval hour should be an integer and the other columns should be strings).
@@ -370,7 +460,18 @@ order_by_ = ["Customer Account Number", "Meter Number", "Data Type", "Start Date
 ascending_ = [True, True, True, True, True]
 
 sorted_clean_df = goodreadings_df.orderBy(order_by_, ascending=ascending_)
-display(sorted_clean_df)
+display(sorted_clean_df.limit(4))
+
+# COMMAND ----------
+
+# a look at specific customer
+cust_1 = "1693001695"
+
+# Filter by meter num
+cust1_ordered = sorted_clean_df.filter(F.col("Customer Account Number") == cust_1)
+
+display(cust1_ordered)
+
 
 # COMMAND ----------
 
@@ -383,8 +484,29 @@ display(sorted_clean_df)
 
 # COMMAND ----------
 
-# Save sorted_clean_df as CSV into "output/CleanMeterData/CSV" 
-#sorted_clean_df.coalesce(1).write.option('header', True).mode('overwrite').csv(uri + "output/CleanMeterData/CSV")
+# # Save sorted_clean_df as CSV into "output/CleanMeterData/CSV" 
+# sorted_clean_df.coalesce(1).write.option('header', True).mode('overwrite').csv(uri + "output/CleanMeterData/CSV")
 
-# Save sorted_clean_df as Parquet into "output/CleanMeterData/Parquet"
-#sorted_clean_df.coalesce(1).write.mode('overwrite').parquet(uri + "output/CleanMeterData/Parquet")
+# # Save sorted_clean_df as Parquet into "output/CleanMeterData/Parquet"
+# sorted_clean_df.coalesce(1).write.mode('overwrite').parquet(uri + "output/CleanMeterData/Parquet")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### Trying SQL in ADB ( just curious)
+
+# COMMAND ----------
+
+sorted_clean_df.createOrReplaceTempView("sorted_clean_table");
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC
+# MAGIC
+# MAGIC
+# MAGIC -- Example: Selecting specific columns
+# MAGIC SELECT DT, `Meter Number`, `Conversion Factor` 
+# MAGIC FROM sorted_clean_table 
+# MAGIC WHERE `Meter Number` = '11270743'
+# MAGIC
