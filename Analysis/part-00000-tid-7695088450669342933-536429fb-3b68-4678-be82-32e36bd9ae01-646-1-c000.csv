@@ -1,0 +1,13 @@
+Number,Question,Answer,Points
+1,Rows  in your cleaned dataset:,4277.0,2
+2,Total electrical usage for the day:,14496.0,4
+3,Total electrical usage for Residental customers for the day:,12579.0,4
+4,Total electrical usage in hour 7 of the day:,,4
+5,Top meter in terms of usage:,17047518,1
+6,Usage for top meter:,9.0,1
+7,Second highest meter in terms of usage:,3811954,1
+8,Usage for second highest meter 7,9.0,1
+9,Top hour in terms of usage:,3,2
+10,Usage in top hour:,14496.0,2
+11,Number of meters with no valid readings after cleaning:,181,4
+12,Number of Customer Account Number / Meter Number / Data Type combos with some data but not all data after cleaning:,4276,4
