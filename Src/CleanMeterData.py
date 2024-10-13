@@ -488,11 +488,11 @@ display(cust1_ordered)
 
 # COMMAND ----------
 
-# # Save sorted_clean_df as CSV into "output/CleanMeterData/CSV" 
-sorted_clean_df.coalesce(1).write.option('header', True).mode('overwrite').csv(uri + "output/CleanMeterData/CSV")
+# # # Save sorted_clean_df as CSV into "output/CleanMeterData/CSV" 
+# sorted_clean_df.coalesce(1).write.option('header', True).mode('overwrite').csv(uri + "output/CleanMeterData/CSV")
 
-# Save sorted_clean_df as Parquet into "output/CleanMeterData/Parquet"
-sorted_clean_df.coalesce(1).write.mode('overwrite').parquet(uri + "output/CleanMeterData/Parquet")
+# # Save sorted_clean_df as Parquet into "output/CleanMeterData/Parquet"
+# sorted_clean_df.coalesce(1).write.mode('overwrite').parquet(uri + "output/CleanMeterData/Parquet")
 
 # COMMAND ----------
 

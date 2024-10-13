@@ -3,6 +3,83 @@
 # MAGIC # AnalyzeData
 # MAGIC
 # MAGIC Use the cleaned dataset to answer the following questions.
+# MAGIC
+# MAGIC ## Read data
+# MAGIC
+# MAGIC - Data set1: Cleaned meter data ( from step-1)
+# MAGIC - Data set2: `CustMeter.csv`
+# MAGIC   - contains more information about each customer and meter. 
+# MAGIC   - A given Customer Account Number can have multiple Meter Numbers. 
+# MAGIC   - Each Meter Number may have multiple Data Types.
+# MAGIC
+# MAGIC ### CSV vs Parquet ?
+# MAGIC
+# MAGIC - Parquet format: 
+# MAGIC   - preserves meta-data (`schema information`)
+# MAGIC   - binary data
+# MAGIC   - used for data analysis   
+# MAGIC
+# MAGIC
+# MAGIC - csv format: 
+# MAGIC   - does not retain schema
+# MAGIC   - all data types will be downcasted to text type ( shown below)
+# MAGIC
+# MAGIC
+# MAGIC ### Explore datasets:
+# MAGIC
+
+# COMMAND ----------
+
+# -------------------------- SET UP -------------------------------------------
+
+storage_end_point = "assign1storebekalue.dfs.core.windows.net" 
+my_scope = "MarchMadnessScope"
+my_key = "march-madstore-key"
+
+spark.conf.set(
+    "fs.azure.account.key." + storage_end_point,
+    dbutils.secrets.get(scope=my_scope, key=my_key))
+
+uri = "abfss://assign1@assign1storebekalue.dfs.core.windows.net/"
+
+# -----------------------------------------------------------------------------
+
+
+
+# customer data
+custMeter_df = spark.read.csv(uri + "InputData/CustMeter.csv", header=True, inferSchema=True)
+
+
+
+# columns
+all_columns = custMeter_df.columns
+
+
+print("CustMeter.csv : ")
+print(f"Total rows:  {custMeter_df.count():->24}") 
+for col, dType in custMeter_df.dtypes:
+
+  print(f"{col:25}: {dType:->10}")
+
+print("\n")
+
+display(custMeter_df.limit(5))
+
+
+
+
+
+# cleaned meter data
+meter_parquet = spark.read.parquet(uri + "output/CleanMeterData/Parquet/part-00000-tid-4767130156803915849-ffc53a3e-9e39-485c-9640-5d3d06a24781-186-1.c000.snappy.parquet")
+
+
+
+meter_csv = spark.read.csv(uri + "output/CleanMeterData/CSV/part-00000-tid-2212775626371479390-e97d2afe-de1e-483e-b327-c8a671ce6365-182-1-c000.csv")
+
+print("\ncsv data - no schema:")
+display(meter_csv.limit(2))
+print("\nparquet data - with schema:")
+display(meter_parquet.limit(2))
 
 # COMMAND ----------
 
@@ -52,10 +129,10 @@ display(answer_df)
 
 
 # read csv 
-# meter_csv = spark.read.csv(uri + "output/CleanMeterData/CSV/part-00000-tid-619694488781875170-eb4a3798-1f43-4344-8923-b95329c47eb0-252-1-c000.csv", header=True, inferSchema=True)
+# meter_csv = spark.read.csv(uri + "output/CleanMeterData/CSV/part-00000-tid-2212775626371479390-e97d2afe-de1e-483e-b327-c8a671ce6365-182-1-c000.csv", header=True, inferSchema=True)
 
 # read parquet 
-meter_parquet = spark.read.parquet(uri + "output/CleanMeterData/Parquet/part-00000-tid-7298361610271161709-dca1d579-a5dc-426c-89c1-77d003d307b2-255-1.c000.snappy.parquet")
+meter_parquet = spark.read.parquet(uri + "output/CleanMeterData/Parquet/part-00000-tid-4767130156803915849-ffc53a3e-9e39-485c-9640-5d3d06a24781-186-1.c000.snappy.parquet")
 
 
 #the dataset
@@ -79,18 +156,19 @@ display(answer_df)
 
 
 # Your code
+
 from pyspark.sql import functions as F
 
+# Sum the 'IntervalValue' column to get the total usage for the day
+total_usage_for_day = meter_parquet.filter(F.col("IntervalValue").isNotNull()) \
+                                   .agg(F.sum("IntervalValue").alias("TotalUsage")) \
+                                   .collect()[0][0]
+
+# Display the total usage
+print(f"Total electrical usage for the day: {total_usage_for_day}")
 
 
-# total electric usage for the day
-total_usage_df = meter_parquet.filter(F.col("IntervalValue").isNotNull()).groupBy("Meter Number", "Customer Account Number", "Start Date").agg(F.sum("IntervalValue").alias("TotalUsage"))
-
-# Display the result
-display(total_usage_df)
-
-
-your_answer = 2.0
+your_answer = total_usage_for_day
 
 # Add answer to the answer data frame.  
 answer_df = answer_df.withColumn("Answer", when(answer_df.Number == 2, lit(your_answer)).otherwise(answer_df.Answer))
@@ -99,229 +177,24 @@ display(answer_df)
 # COMMAND ----------
 
 # Question 3 - What's the total electrical usage for 'Residental' customers for the day?
-# Your code
-your_answer = 3.0
-
-# Add answer to the answer data frame.  
-answer_df = answer_df.withColumn("Answer", when(answer_df.Number == 3, lit(your_answer)).otherwise(answer_df.Answer))
-display(answer_df)
-
-# COMMAND ----------
-
-# Question 4 - What's the total electrical usage for hour 7 of the day?
-# Your code
-your_answer = 4.0
-
-# Add answer to the answer data frame.  
-answer_df = answer_df.withColumn("Answer", when(answer_df.Number == 4, lit(your_answer)).otherwise(answer_df.Answer))
-display(answer_df)
-
-# COMMAND ----------
-
-# Question 5-8 - What are the top 2 meters in terms of usage for the day and how much power did they use?
-
-# top meter interms of usage
-# usage for the top meter
-# second highest meter in terms of usage
-# usage for the second highet meter
 
 
 
 # Your code
-meter1 = 12345   # May need to convert the meter number from a string
-meter1_usage = 6.0
-meter2 = 12345
-meter2_usage = 8.0
 
-# Add answer to the answer data frame.  
-answer_df = answer_df.withColumn("Answer", when(answer_df.Number == 5, lit(meter1)).otherwise(answer_df.Answer))
-answer_df = answer_df.withColumn("Answer", when(answer_df.Number == 6, lit(meter1_usage)).otherwise(answer_df.Answer))
-answer_df = answer_df.withColumn("Answer", when(answer_df.Number == 7, lit(meter2)).otherwise(answer_df.Answer))
-answer_df = answer_df.withColumn("Answer", when(answer_df.Number == 8, lit(meter2_usage)).otherwise(answer_df.Answer))
-display(answer_df)
-
-# COMMAND ----------
-
-# Question 9-10 - Which hour had the most usage for the day and what was the total electrical usage?
-# Your code
-hour = 9
-hour_usage = 10.0
-
-# Add answer to the answer data frame.  
-answer_df = answer_df.withColumn("Answer", when(answer_df.Number == 9, lit(hour)).otherwise(answer_df.Answer))
-answer_df = answer_df.withColumn("Answer", when(answer_df.Number == 10, lit(hour_usage)).otherwise(answer_df.Answer))
-display(answer_df)
-
-# COMMAND ----------
-
-# Question 11 - How many meters are in CustMeter.csv dataset that didn't have any valid readings for the day after cleaning the data?
-
-# Your code
-total_meters = 11
-
-# Add answer to the answer data frame.  
-answer_df = answer_df.withColumn("Answer", when(answer_df.Number == 11, lit(total_meters)).otherwise(answer_df.Answer))
-display(answer_df)
-
-# COMMAND ----------
-
-# Question 12 - How many Custmer Account Number / Meter Number / Data Type combinations have some data in the cleaned file but not all?
-# Your code
-total_combos = 12
-
-# Add answer to the answer data frame.  
-answer_df = answer_df.withColumn("Answer", when(answer_df.Number == 12, lit(total_combos)).otherwise(answer_df.Answer))
-display(answer_df)
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Read data
-# MAGIC
-# MAGIC - Data set1: Cleaned meter data ( from step-1)
-# MAGIC - Data set2: `CustMeter.csv`
-# MAGIC   - contains more information about each customer and meter. 
-# MAGIC   - A given Customer Account Number can have multiple Meter Numbers. 
-# MAGIC   - Each Meter Number may have multiple Data Types.
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### CSV vs Parquet ?
-# MAGIC
-# MAGIC - Parquet format: 
-# MAGIC   - preserves meta-data (`schema information`)
-# MAGIC   - binary data
-# MAGIC   - used for data analysis   
-# MAGIC
-# MAGIC
-# MAGIC - csv format: 
-# MAGIC   - does not retain schema
-# MAGIC   - all data types will be downcasted to text type ( shown below)
-
-# COMMAND ----------
-
-storage_end_point = "assign1storebekalue.dfs.core.windows.net" 
-my_scope = "MarchMadnessScope"
-my_key = "march-madstore-key"
-
-spark.conf.set(
-    "fs.azure.account.key." + storage_end_point,
-    dbutils.secrets.get(scope=my_scope, key=my_key))
-
-uri = "abfss://assign1@assign1storebekalue.dfs.core.windows.net/"
+# solution : Inner join 
+# Inner join meter_parquet_df and customer_info_df on Customer Account Number and Meter Number
 
 
-# read csv 
-meter_csv = spark.read.csv(uri + "output/CleanMeterData/CSV/part-00000-tid-8348721999135757182-bed5e7a6-8e5a-4f20-bd5a-1036b3b0717b-108-1-c000.csv", 
-                                   header=True, inferSchema=True)
-
-# read parquet 
-meter_parquet = spark.read.parquet(uri + "output/CleanMeterData/Parquet/part-00000-tid-8124918960389894414-f0768c86-e91b-4064-931d-a06ea3bcfd48-111-1.c000.snappy.parquet")
-
-print("\ncsv data - no schema:")
-display(meter_csv.limit(2))
-print("\nparquet data - with schema:")
-display(meter_parquet.limit(2))
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### Explore dataset2: `CustMeter.csv`
-
-# COMMAND ----------
-
-
+# customer data
 custMeter_df = spark.read.csv(uri + "InputData/CustMeter.csv", header=True, inferSchema=True)
 
-# columns
-all_columns = custMeter_df.columns
-
-print(f"All columns: {all_columns}" )
-print(f"Total columns:  {len(custMeter_df.columns):->21}")
-print(f"Total rows:  {custMeter_df.count():->24}") 
-
-# data types
-print("\nData Types : ")
-for col, dType in custMeter_df.dtypes:
-
-  print(f"{col:25}: {dType:->10}")
-
-print("\n")
-
-display(custMeter_df.limit(5))
-
-# COMMAND ----------
-
-# Save your file.  Specify your container and storage account path in the uri variable.
-# answer_df.coalesce(1).write.option('header',True).mode('overwrite').csv(uri+"Analysis/Answers.csv")
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC # Analysis 
-# MAGIC
-# MAGIC ### Question 2 - What's the total electrical usage for the day?
-
-# COMMAND ----------
-
-display(meter_parquet.limit(2))
-
-# COMMAND ----------
-
-# how many unique customer accounts
-unique_customer_count = meter_parquet.select("Customer Account Number").distinct().count()
-
-# Display the result
-print(f"Number of unique customer accounts: {unique_customer_count}")
+# cleaned meter data
+meter_parquet = spark.read.parquet(uri + "output/CleanMeterData/Parquet/part-00000-tid-4767130156803915849-ffc53a3e-9e39-485c-9640-5d3d06a24781-186-1.c000.snappy.parquet")
 
 
 
-# how many unique meter  numbers
-unique_customer_count = meter_parquet.select("Meter Number").distinct().count()
 
-# Display the result
-print(f"Number of unique Meter Numbers: {unique_customer_count}")
-
-print(f"Total number of rows: {meter_parquet.count()}")
-
-
-# COMMAND ----------
-
-from pyspark.sql import functions as F
-# look for speicif customer
-specific_meter_number = "11517331"
-
-# Filter the DataFrame by the specific customer Number
-subset_df = meter_parquet.filter(F.col("Meter Number") == specific_meter_number)
-
-# Display the first 2 rows of the filtered DataFrame
-display(subset_df)
-
-
-# COMMAND ----------
-
-from pyspark.sql import functions as F
-
-
-
-# total electric usage for the day
-
-total_usage_df = meter_parquet.filter(F.col("IntervalValue").isNotNull()).groupBy("Meter Number", "Customer Account Number", "Start Date").agg(F.sum("IntervalValue").alias("TotalUsage"))
-
-# Display the result
-display(total_usage_df)
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### Question 3 - What's the total electrical usage for 'Residental' customers for the day?
-# MAGIC
-# MAGIC - Inner Join 
-
-# COMMAND ----------
-
-# Perform the join between meter_parquet_df and customer_info_df on Customer Account Number and Meter Number
 joined_df = meter_parquet.join(
     custMeter_df, 
     (meter_parquet["Customer Account Number"] == custMeter_df["Customer Account Number"]) & 
@@ -337,190 +210,229 @@ total_residential_usage_df = residential_df \
     .filter(F.col("IntervalValue").isNotNull()) \
     .agg(F.sum("IntervalValue").alias("TotalResidentialUsage"))
 
-# Display the result
-display(total_residential_usage_df)
+
+total_residential_usage = total_residential_usage_df.collect()[0][0]
+
+print(f"\n\nTotal Residential usage for the day: {total_residential_usage}")
+
+
+
+
+
+your_answer = total_residential_usage
+
+# Add answer to the answer data frame.  
+answer_df = answer_df.withColumn("Answer", when(answer_df.Number == 3, lit(your_answer)).otherwise(answer_df.Answer))
+display(answer_df)
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC ### Question 4 - What's the total electrical usage for hour 7 of the day?
+# Question 4 - What's the total electrical usage for hour 7 of the day?
 
-# COMMAND ----------
+
+
+
+# Your code
+# solution - # Aggregate the total usage for hour using IntervalValue == 7 
 
 from pyspark.sql import functions as F
 
-# Filter for hour 7 and sum the IntervalValue
-total_usage_hour_7_df = meter_parquet \
+
+total_usage_hour_7 = meter_parquet \
     .filter(F.col("IntervalHour") == 7) \
-    .agg(F.sum("IntervalValue").alias("TotalUsageHour7"))
+    .agg(F.sum("IntervalValue")).collect()[0][0]
 
-# Display the result
-display(total_usage_hour_7_df)
+# Print the result
+print(f"Total usage for hour 7: {total_usage_hour_7}")
 
+
+your_answer = total_usage_hour_7
+
+# Add answer to the answer data frame.  
+answer_df = answer_df.withColumn("Answer", when(answer_df.Number == 4, lit(your_answer)).otherwise(answer_df.Answer))
+display(answer_df)
 
 # COMMAND ----------
 
-## aggregate usage for each hour
+# Question 5-8 - What are the top 2 meters in terms of usage for the day and how much power did they use?
+
+# what is the top meter (meter number)
+# usage for the top meter
+
+# what is second highest meter in terms of usage
+# usage for the second highet meter
+
+
+
+# Your code
 
 from pyspark.sql import functions as F
 
-# Group by IntervalHour and aggregate total usage for each hour
-total_usage_by_hour_df = meter_parquet.filter(F.col("IntervalValue").isNotNull()) \
-    .groupBy("IntervalHour") \
+# Aggregate total usage by 'Meter Number' and get top 2 meters
+top_10_meters = (
+    meter_parquet
+    .groupBy("Meter Number")
     .agg(F.sum("IntervalValue").alias("TotalUsage"))
-
-# Display the result
-display(total_usage_by_hour_df.orderBy("IntervalHour"))
-
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### Question 5-8 - What are the top 2 meters in terms of usage for the day and how much power did they use?
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### aggregate use by meter
-
-# COMMAND ----------
-
-from pyspark.sql import Window
-from pyspark.sql import functions as F
-
-
-# top meters interms of usage (ranked list of top usage meters)
-# usage for the top meter (in kw?)
-# what is the second highest meter in terms of usage ( meter number)
-# What is usage for the second highet meter ( uasge amount in KW?)
-
-
-# Group by 'Meter Number' and aggregate total usage (sum of 'IntervalValue')
-meter_usage_df = meter_parquet.groupBy("Meter Number") \
-    .agg(F.sum("IntervalValue").alias("TotalUsage")) \
     .orderBy(F.desc("TotalUsage"))
+    .limit(10)
+)
 
-# Get top 2 meters in terms of usage
-top_meters = meter_usage_df.limit(2)
+display(top_10_meters)
 
-# Rank meters based on total usage
-window_spec = Window.orderBy(F.desc("TotalUsage"))
-ranked_meter_usage_df = meter_usage_df.withColumn("Rank", F.rank().over(window_spec))
-
-# 5. Top meters in terms of usage - aggregate by eter and rank
-print("\n\n\nTop meters interms of usage:")
-display(ranked_meter_usage_df)
-
-# 6, 7: Usage for the top meter and second highest meter
-top_meter_usage = top_meters.collect()[0]['TotalUsage']
-second_meter = top_meters.collect()[1]['Meter Number']
-second_meter_usage = top_meters.collect()[1]['TotalUsage']
-
-
-# Usage for second highest meter 7
+# Collect results for top and second top meters
+top_meter = top_10_meters.collect()[0]
+second_meter = top_10_meters.collect()[1]
 
 # Output results
-print(f"Usage for the top meter: {top_meter_usage}")
-print(f"Second highest meter: {second_meter}")
-print(f"Usage for the second highest meter: {second_meter_usage}")
+print(f"Top meter: {top_meter['Meter Number']} with usage: {top_meter['TotalUsage']}")
+print(f"Second highest meter: {second_meter['Meter Number']} with usage: {second_meter['TotalUsage']}")
 
 
-# COMMAND ----------
 
-# look at that speicific meter
-specific_meter_number = "11517331"
-
-# Filter by meter num
-subset_df = meter_parquet.filter(F.col("Meter Number") == specific_meter_number)
-
-display(subset_df)
+# a look at the top meter
+topMeter_num = "17047518"
+topMeter_rec = meter_parquet.filter(F.col("Meter Number") == topMeter_num)
+display(topMeter_rec)
 
 
-# COMMAND ----------
 
-# MAGIC %md
-# MAGIC #### 9. Which hour had the most usage for the day and what was the total electrical usage?
-# MAGIC
+meter1 = top_meter['Meter Number']   
+meter1_usage = top_meter['TotalUsage']
+meter2 = second_meter['Meter Number']
+meter2_usage = second_meter['TotalUsage']
 
-# COMMAND ----------
-
-# 9 Which hour had the most usage for the day 
-# 10 what was the total electrical usage?
+# Add answer to the answer data frame.  
+answer_df = answer_df.withColumn("Answer", when(answer_df.Number == 5, lit(meter1)).otherwise(answer_df.Answer))
+answer_df = answer_df.withColumn("Answer", when(answer_df.Number == 6, lit(meter1_usage)).otherwise(answer_df.Answer))
+answer_df = answer_df.withColumn("Answer", when(answer_df.Number == 7, lit(meter2)).otherwise(answer_df.Answer))
+answer_df = answer_df.withColumn("Answer", when(answer_df.Number == 8, lit(meter2_usage)).otherwise(answer_df.Answer))
+display(answer_df)
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC #### 11. How many meters are in CustMeter.csv dataset that didn't have any valid readings for the day after cleaning the data?
-# MAGIC
-# MAGIC
-# MAGIC -outre join
+# Question 9-10 - Which hour had the most usage for the day and what was the total electrical usage?
+
+
+
+# Your code
+from pyspark.sql import functions as F
+
+# Aggregate total usage by 'IntervalHour'
+hourly_usage_df = (
+    meter_parquet
+    .groupBy("IntervalHour")
+    .agg(F.sum("IntervalValue").alias("TotalUsage"))
+    .orderBy(F.desc("TotalUsage"))
+)
+
+# Get the hour with the most usage
+most_usage_hour = hourly_usage_df.first()
+
+# Extract the hour and total usage
+hour_with_most_usage = most_usage_hour['IntervalHour']
+total_usage_for_hour = most_usage_hour['TotalUsage']
+
+# Output results
+print(f"Hour with the most usage: {hour_with_most_usage} with total electrical usage: {total_usage_for_hour}")
+
+
+
+
+
+hour = hour_with_most_usage
+hour_usage = total_usage_for_hour
+
+# Add answer to the answer data frame.  
+answer_df = answer_df.withColumn("Answer", when(answer_df.Number == 9, lit(hour)).otherwise(answer_df.Answer))
+answer_df = answer_df.withColumn("Answer", when(answer_df.Number == 10, lit(hour_usage)).otherwise(answer_df.Answer))
+display(answer_df)
 
 # COMMAND ----------
 
 # Question 11 - How many meters are in CustMeter.csv dataset that didn't have any valid readings for the day after cleaning the data?
 
-from pyspark.sql import functions as F
-
-# Load CustMeter.csv dataset
-cust_meter_df = spark.read.csv(uri + "InputData/CustMeter.csv", header=True, inferSchema=True)
-
-# Clean the data by removing invalid readings (e.g., null or zero IntervalValue)
-cleaned_df = meter_parquet.filter(F.col("IntervalValue").isNotNull() & (F.col("IntervalValue") > 0))
-
-# Identify meters that didn't have any valid readings by using an anti-join
-meters_with_no_valid_readings = cust_meter_df.alias("cm").join(
-    cleaned_df.alias("mp"),
-    on=cust_meter_df["Meter Number"] == cleaned_df["Meter Number"],
-    how="leftanti"  # This gets all the meters that don't have any matching valid readings
-)
-
-# Count the number of meters with no valid readings
-num_meters_no_valid_readings = meters_with_no_valid_readings.count()
-
-# Output the result
-print(f"Number of meters with no valid readings: {num_meters_no_valid_readings}")
-print("The record:")
-display(meters_with_no_valid_readings)
+# Your code
 
 
+custMeter_df = spark.read.csv(uri + "InputData/CustMeter.csv", header=True, inferSchema=True)
+meter_parquet = spark.read.parquet(uri + "output/CleanMeterData/Parquet/part-00000-tid-4767130156803915849-ffc53a3e-9e39-485c-9640-5d3d06a24781-186-1.c000.snappy.parquet")
 
 
-# COMMAND ----------
+# Get distinct meter numbers with valid readings 
+valid_meters = meter_parquet.select("Meter Number").distinct()
 
-# MAGIC %md
-# MAGIC #### 12- How many Custmer Account Number / Meter Number / Data Type combinations have some data in the cleaned file but not all?
+# Get total distinct meters in CustMeter 
+total_meters = custMeter_df.select("Meter Number").distinct()
+
+# Find meters without valid readings
+meters_without_valid_readings = total_meters.subtract(valid_meters)
+
+# Count number of meters without valid readings
+count_meters_without_valid_readings = meters_without_valid_readings.count()
+
+print(f"\n\nNumber of meters without valid readings for the day: {count_meters_without_valid_readings}")
+print("\n\nThe list of meters with no valid readings:")
+
+
+display(meters_without_valid_readings)
+
+
+total_meters = count_meters_without_valid_readings
+
+# Add answer to the answer data frame.  
+answer_df = answer_df.withColumn("Answer", when(answer_df.Number == 11, lit(total_meters)).otherwise(answer_df.Answer))
+display(answer_df)
 
 # COMMAND ----------
 
 # Question 12 - How many Custmer Account Number / Meter Number / Data Type combinations have some data in the cleaned file but not all?
 
 
+
+
+# Your code
+
+
 from pyspark.sql import functions as F
 
-# Load the cleaned meter data (this assumes you've already cleaned your data)
-# cleaned_df = ... (your existing cleaned DataFrame)
-
-# Group by Customer Account Number, Meter Number, and Data Type, and count valid readings
-grouped_df = cleaned_df.groupBy(
-    "Customer Account Number",
-    "Meter Number",
-    "Data Type"
-).agg(F.count("IntervalValue").alias("ValidReadingsCount"))
-
-# Count the total expected readings (assuming you expect 24 hourly readings for the day)
-total_expected_readings = 24
-
-# Filter combinations with some but not all valid readings
-partial_data_combinations = grouped_df.filter(
-    (F.col("ValidReadingsCount") > 0) & (F.col("ValidReadingsCount") < total_expected_readings)
+# Group by 'Customer Account Number', 'Meter Number', and 'Data Type' and count distinct readings
+data_counts_df = (
+    meter_parquet
+    .groupBy("Customer Account Number", "Meter Number", "Data Type")
+    .agg(F.count("IntervalValue").alias("DataCount"))
 )
 
-# Count the number of such combinations
-num_partial_data_combinations = partial_data_combinations.count()
+
+expected_total_readings = 4277  # from the number of rows in the cleaned meter data
+
+# Filter combinations with some but not all readings
+incomplete_combinations = data_counts_df.filter((F.col("DataCount") > 0) & (F.col("DataCount") < expected_total_readings))
+
+# Count the unique combinations
+count_incomplete_combinations = incomplete_combinations.count()
 
 # Output the result
-print(f"Number of combinations with some but not all data: {num_partial_data_combinations}")
+print(f"\n\nNumber of incomplete combinations: {count_incomplete_combinations}")
 
 
-display(partial_data_combinations)
+display(incomplete_combinations)
 
+
+
+
+
+total_combos = count_incomplete_combinations
+
+# Add answer to the answer data frame.  
+answer_df = answer_df.withColumn("Answer", when(answer_df.Number == 12, lit(total_combos)).otherwise(answer_df.Answer))
+display(answer_df)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC
+
+# COMMAND ----------
+
+# Save your file.  Specify your container and storage account path in the uri variable.
+# answer_df.coalesce(1).write.option('header',True).mode('overwrite').csv(uri+"Analysis/Answers.csv")
