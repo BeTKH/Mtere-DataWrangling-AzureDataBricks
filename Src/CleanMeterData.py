@@ -414,8 +414,8 @@ number_of_rows(long_format_df, ["Fwd Consumption in Watts"])
 # COMMAND ----------
 
 # Remove records where QCCode != "QC#3"
-goodreadings_df = long_format_df.filter(filtered_df_kws.QCCode == "QC#3")
-goodreadings_dedup_df = long_format_df.filter(filtered_df_kws.QCCode == "QC#3").dropDuplicates()
+goodreadings_df = filtered_df_kws.filter(filtered_df_kws.QCCode == "QC#3")
+goodreadings_dedup_df = filtered_df_kws.filter(filtered_df_kws.QCCode == "QC#3").dropDuplicates()
 
 
 goodreadings_df_rows_count = goodreadings_df.count()
@@ -424,6 +424,10 @@ print(f"\nTotal rows after deleting bad records    :  {goodreadings_df.count():<
 print(f"\nTotal rows after deleting duplicate + bad records    :  {goodreadings_dedup_df.count():<10}") 
 
 
+
+# COMMAND ----------
+
+display(goodreadings_dedup_df)
 
 # COMMAND ----------
 
@@ -441,10 +445,10 @@ display(cust1_long_dedup)
 # MAGIC %md
 # MAGIC ### Insights
 # MAGIC
-# MAGIC - after ignoring all bad readings which are not QC#3, we are down to `4,644` records.
-# MAGIC - after removing duplicates, we have now `4,630`. ( there were 14 duplicate records)
-# MAGIC - removed `9,8340` records. 
-# MAGIC - seems like we are back to the original data length but smaller width
+# MAGIC - after ignoring all bad readings which are not QC#3, we are down to `4,291` records.
+# MAGIC - after removing duplicates, we have now `4,277`. ( there were 14 duplicate records)
+# MAGIC - only `intervalHour` = `3` is retained
+# MAGIC
 # MAGIC
 # MAGIC
 # MAGIC ## Step-6: Ordering the Records 
@@ -459,8 +463,8 @@ display(cust1_long_dedup)
 order_by_ = ["Customer Account Number", "Meter Number", "Data Type", "Start Date", "IntervalHour"]
 ascending_ = [True, True, True, True, True]
 
-sorted_clean_df = goodreadings_df.orderBy(order_by_, ascending=ascending_)
-display(sorted_clean_df.limit(4))
+sorted_clean_df = goodreadings_dedup_df.orderBy(order_by_, ascending=ascending_)
+display(sorted_clean_df)
 
 # COMMAND ----------
 
@@ -485,10 +489,10 @@ display(cust1_ordered)
 # COMMAND ----------
 
 # # Save sorted_clean_df as CSV into "output/CleanMeterData/CSV" 
-# sorted_clean_df.coalesce(1).write.option('header', True).mode('overwrite').csv(uri + "output/CleanMeterData/CSV")
+sorted_clean_df.coalesce(1).write.option('header', True).mode('overwrite').csv(uri + "output/CleanMeterData/CSV")
 
-# # Save sorted_clean_df as Parquet into "output/CleanMeterData/Parquet"
-# sorted_clean_df.coalesce(1).write.mode('overwrite').parquet(uri + "output/CleanMeterData/Parquet")
+# Save sorted_clean_df as Parquet into "output/CleanMeterData/Parquet"
+sorted_clean_df.coalesce(1).write.mode('overwrite').parquet(uri + "output/CleanMeterData/Parquet")
 
 # COMMAND ----------
 

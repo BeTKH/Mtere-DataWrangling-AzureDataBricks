@@ -52,19 +52,22 @@ display(answer_df)
 
 
 # read csv 
-# meter_csv = spark.read.csv(uri + "output/CleanMeterData/CSV/part-00000-tid-8348721999135757182-bed5e7a6-8e5a-4f20-bd5a-1036b3b0717b-108-1-c000.csv", header=True, inferSchema=True)
+# meter_csv = spark.read.csv(uri + "output/CleanMeterData/CSV/part-00000-tid-619694488781875170-eb4a3798-1f43-4344-8923-b95329c47eb0-252-1-c000.csv", header=True, inferSchema=True)
 
 # read parquet 
-meter_parquet = spark.read.parquet(uri + "output/CleanMeterData/Parquet/part-00000-tid-8124918960389894414-f0768c86-e91b-4064-931d-a06ea3bcfd48-111-1.c000.snappy.parquet")
+meter_parquet = spark.read.parquet(uri + "output/CleanMeterData/Parquet/part-00000-tid-7298361610271161709-dca1d579-a5dc-426c-89c1-77d003d307b2-255-1.c000.snappy.parquet")
 
 
-print("\nparquet data - with schema:")
+#the dataset
+print("The dataset - read from parquet - retain schema: ")
 display(meter_parquet)
 
+row_count = meter_parquet.count()
 
-print(f"Total number of rows: {meter_parquet.count()}")
 
-your_answer = meter_parquet.count()
+print(f"\n\nTotal number of rows: {row_count}")
+
+your_answer = row_count
 # Add answer to the answer data frame.  
 answer_df = answer_df.withColumn("Answer", when(answer_df.Number == 1, lit(your_answer)).otherwise(answer_df.Answer))
 display(answer_df)
